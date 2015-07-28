@@ -26,7 +26,6 @@
 
 /* Begin PBXFileReference section */
 		4200185C1B0D8F23009EB47B /* libuexESurfingRtc.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libuexESurfingRtc.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		4200186D1B0D8F23009EB47B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		420018761B0D8F5D009EB47B /* EUExESurfingRtc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EUExESurfingRtc.h; sourceTree = "<group>"; };
 		420018771B0D8F5D009EB47B /* EUExESurfingRtc.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = EUExESurfingRtc.m; sourceTree = "<group>"; };
 		4200187A1B0D903D009EB47B /* DAPIPView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DAPIPView.h; sourceTree = "<group>"; };
@@ -82,7 +81,6 @@
 			isa = PBXGroup;
 			children = (
 				4200185E1B0D8F23009EB47B /* EUExESurfingRtc */,
-				4200186B1B0D8F23009EB47B /* EUExESurfingRtcTests */,
 				4200185D1B0D8F23009EB47B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -103,22 +101,6 @@
 				420018791B0D903D009EB47B /* soureCode */,
 			);
 			path = EUExESurfingRtc;
-			sourceTree = "<group>";
-		};
-		4200186B1B0D8F23009EB47B /* EUExESurfingRtcTests */ = {
-			isa = PBXGroup;
-			children = (
-				4200186C1B0D8F23009EB47B /* Supporting Files */,
-			);
-			path = EUExESurfingRtcTests;
-			sourceTree = "<group>";
-		};
-		4200186C1B0D8F23009EB47B /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				4200186D1B0D8F23009EB47B /* Info.plist */,
-			);
-			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
 		420018791B0D903D009EB47B /* soureCode */ = {
