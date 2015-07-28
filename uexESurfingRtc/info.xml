@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<uexplugins>
+    <plugin uexName="uexESurfingRtc" version="3.0.5" build ="5">
+         <info>5:改为主函数回调</info>
+          <build>4:测试接收appid和appkey的方式</build>
+            <build>3:改变接收appid和appkey的方式</build>
+         <build>2:测试setappid接口</build>
+         <build>1:doNavigation参数默认传cloud2</build>
+       <build>0:天翼RTC插件</build>
+	</plugin>
+</uexplugins>
