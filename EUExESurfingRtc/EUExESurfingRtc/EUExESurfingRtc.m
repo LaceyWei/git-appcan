@@ -70,9 +70,12 @@
         
         if ([self.appkey intValue]>0||[self.appid intValue]>0)
         {
-            UIAlertView * alert = [[UIAlertView alloc]initWithTitle:@"AppKey、AppId设置成功" message:nil delegate:self cancelButtonTitle:nil otherButtonTitles:@"确定", nil];
-            [alert show];
+//            UIAlertView * alert = [[UIAlertView alloc]initWithTitle:@"AppKey、AppId设置成功" message:nil delegate:self cancelButtonTitle:nil otherButtonTitles:@"确定", nil];
+//            [alert show];
+            [self jsSuccessWithName:@"uexESurfingRtc.cbSetAppKeyAndAppId" opId:0 dataType:0 strData:@"OK"];
 
+        }else{
+            [self jsSuccessWithName:@"uexESurfingRtc.cbSetAppKeyAndAppId" opId:0 dataType:0 strData:@"ERROR:PARM_ERROR"];
         }
        
 //        self.appkey = [NSString stringWithFormat:@"%d",self.appkeys];
@@ -93,6 +96,7 @@
         if ([self.appkey intValue] !=0||[self.appid intValue]!=0)
         {
             int  number = [[inArgument objectAtIndex:0] intValue];
+            NSLog(@"username:---->>>>>%d",number);
             NSString * infoStr = [inArgument objectAtIndex:1];
             
             NSDictionary * dic = [infoStr JSONValue];
@@ -130,13 +134,13 @@
             
             
         }else{
-            UIAlertView * alert = [[UIAlertView alloc]initWithTitle:@"请设置AppKey、AppId" message:nil delegate:self cancelButtonTitle:nil otherButtonTitles:@"确定", nil];
-            [alert show];
-            return;
-
+//            UIAlertView * alert = [[UIAlertView alloc]initWithTitle:@"请设置AppKey、AppId" message:nil delegate:self cancelButtonTitle:nil otherButtonTitles:@"确定", nil];
+//            [alert show];
+//            return;
+            
+           [self jsSuccessWithName:@"uexESurfingRtc.cbLogStatus" opId:0 dataType:0 strData:@"ERROR:PARM_ERROR"];
         }
 
-        
     }
 }
 
@@ -157,7 +161,15 @@
         mAccObj.Delegate = self;
         //此句代码为临时做法，开发者需通过第三方应用平台获取token，无需通过此接口获取
         //获取到返回结果后，请调用doAccRegister接口进行注册，传入参数为服务器返回的结构
-    [mAccObj getToken:self.str andType:accType andGrant:@"100<200" andAuthType:ACC_AUTH_TO_APPALL];
+        if([self.str isEqualToString:@"0"]){
+        
+            [self jsSuccessWithName:@"uexESurfingRtc.cbLogStatus" opId:0 dataType:0 strData:@"ERROR:PARM_ERROR"];
+            
+            return;
+        }else{
+         [mAccObj getToken:self.str andType:accType andGrant:@"100<200" andAuthType:ACC_AUTH_TO_APPALL];
+        }
+   
     }
     else if ([mAccObj isRegisted])
     {
@@ -344,14 +356,12 @@
             
             [mCallObj doAcceptCall:[NSNumber numberWithInt:self.accepptType]];
             [self setLog:@"音频已接听"];
-            [self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"音频已接听"];
+            [self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"OK:CALLING"];
             
             //[mCallObj doSwitchAudioDevice:SDK_AUDIO_OUTPUT_SPEAKER];
         }
         else
         {
-            
-            
             
             long long localV = [[data objectForKey:@"lvideo"]longLongValue];
             NSLog(@"%lld",localV);
