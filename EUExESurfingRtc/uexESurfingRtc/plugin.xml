@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<uexplugins>
+    
+    
+    <plugin name="uexESurfingRtc">
+    <method name="setAppKeyAndAppId"></method>
+    <method name="login"></method>
+        <method name="call"></method>
+        <method name="acceptCall"></method>
+        <method name="rejectCall"></method>
+         <method name="logout"></method>
+         <method name="hangUp"></method>
+         <method name="mute"></method>
+         <method name="loudSpeaker"></method>
+         <method name="setVideoAttr"></method>
+         <method name="takeRemotePicture"></method>
+
+    </plugin>
+</uexplugins>
