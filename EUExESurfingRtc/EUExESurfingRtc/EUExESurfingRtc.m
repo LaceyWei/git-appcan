@@ -18,12 +18,18 @@
 #import <SystemConfiguration/CaptiveNetwork.h>
 #import <AVFoundation/AVCaptureSession.h>
 #import "DAPIPView.h"
-
-#define APP_USER_AGENT      @"RTC_AppCan"
+#define APP_USER_AGENT      @"vvdemo"
 #define APP_VERSION         @"V2.1.2_B20150508"
+#define U1 @"5668"
+#define U2 @"8889"
+#define CALL_INCOMING_FLAG  @"CALL_INCOMING_FLAG"
 
 
 @implementation EUExESurfingRtc
+@synthesize isVideo;
+@synthesize isAutoRotate;
+@synthesize localVideoView = _localVideoView;
+@synthesize borderInsets = _borderInsets;
 @synthesize currentTime;
 
 - (id)initWithBrwView:(EBrowserView *)eInBrwView
@@ -33,6 +39,10 @@
         
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onRecvEvent:) name:@"NOTIFY_EVENT" object:nil];
 
+        isAutoRotationVideo = YES;
+        isVideo = YES;
+        isAutoRotate= YES;
+         mMuteState = NO;
         accType = ACCTYPE_APP;
         terminalType = TERMINAL_TYPE_PHONE;
         [terminalType retain];
@@ -41,21 +51,9 @@
         remoteTerminalType = TERMINAL_TYPE_ANY;
         [remoteTerminalType retain];
         
-        mMotionManager = [[CMMotionManager alloc]init];
+//        [self.appkey intValue] ==0;
+//        [self.appid intValue]== 0;
         
-        initCWDebugLog();
-        [self checkNetWorkReachability];//检测网络切换
-        
-        //注册本地推送
-        if ([UIApplication instancesRespondToSelector:@selector(registerUserNotificationSettings:)]&&[[[UIDevice currentDevice]systemVersion]floatValue]>=8.0)
-        {
-            [[UIApplication sharedApplication] registerUserNotificationSettings:[UIUserNotificationSettings settingsForTypes:UIUserNotificationTypeAlert|UIUserNotificationTypeBadge|UIUserNotificationTypeSound categories:nil]];
-            CWLogDebug(@"registerUserNotificationSettings");
-        }
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(enterBackgroundNotification:) name:UIApplicationDidEnterBackgroundNotification object:nil];
-        
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(enterForegroundNotification:) name:UIApplicationWillEnterForegroundNotification object:nil];
     }
     return self;
 }
@@ -72,15 +70,23 @@
         
         if ([self.appkey intValue]>0||[self.appid intValue]>0)
         {
+//            UIAlertView * alert = [[UIAlertView alloc]initWithTitle:@"AppKey、AppId设置成功" message:nil delegate:self cancelButtonTitle:nil otherButtonTitles:@"确定", nil];
+//            [alert show];
             [self jsSuccessWithName:@"uexESurfingRtc.cbSetAppKeyAndAppId" opId:0 dataType:0 strData:@"OK"];
 
         }else{
             [self jsSuccessWithName:@"uexESurfingRtc.cbSetAppKeyAndAppId" opId:0 dataType:0 strData:@"ERROR:PARM_ERROR"];
         }
+       
+//        self.appkey = [NSString stringWithFormat:@"%d",self.appkeys];
+//        
+//        self.appid = [NSString stringWithFormat:@"%d",self.appids];
+        
     }
 }
 
 //登陆接口
+
 -(void)login:(NSMutableArray*)inArgument{
     
     if ([inArgument isKindOfClass:[NSMutableArray class]] && [inArgument count] == 2)
@@ -89,9 +95,9 @@
         
         if ([self.appkey intValue] !=0||[self.appid intValue]!=0)
         {
-            int  number = [[inArgument objectAtIndex:1] intValue];
+            int  number = [[inArgument objectAtIndex:0] intValue];
             NSLog(@"username:---->>>>>%d",number);
-            NSString * infoStr = [inArgument objectAtIndex:0];
+            NSString * infoStr = [inArgument objectAtIndex:1];
             
             NSDictionary * dic = [infoStr JSONValue];
             NSLog(@"chen_____>......>>.%@",dic);
@@ -126,9 +132,15 @@
             [mSDKObj setDelegate:self];
             [mSDKObj doNavigation:@"cloud2"];
             
+            
         }else{
+//            UIAlertView * alert = [[UIAlertView alloc]initWithTitle:@"请设置AppKey、AppId" message:nil delegate:self cancelButtonTitle:nil otherButtonTitles:@"确定", nil];
+//            [alert show];
+//            return;
+            
            [self jsSuccessWithName:@"uexESurfingRtc.cbLogStatus" opId:0 dataType:0 strData:@"ERROR:PARM_ERROR"];
         }
+
     }
 }
 
@@ -192,10 +204,6 @@
     }
 }
 
--(void)cbLogStatus:(NSString*)senser{
-    [self jsSuccessWithName:@"uexESurfingRtc.cbLogStatus" opId:0 dataType:0 strData:senser];
-}
-
 //注册结果回调
 -(int)onRegisterResponse:(NSDictionary*)result  accObj:(AccObj*)accObj
 {
@@ -238,19 +246,22 @@
     if (nRspCode == 200)
     {
         [self setLog:[NSString stringWithFormat:@"登录成功,距下次注册%d秒",nExpire]];
-        [self performSelectorOnMainThread:@selector(cbLogStatus:) withObject:@"OK:LOGIN" waitUntilDone:NO];
+        [self performSelectorOnMainThread:@selector(onItemClickCallBack:) withObject:self waitUntilDone:NO];
        
     }
     else
     {
         [self setLog:[NSString stringWithFormat:@"登录失败:%d:%@",nRspCode,sReason]];
-        [self performSelectorOnMainThread:@selector(cbLogStatus:) withObject:@"ERROR:PARM_ERROR" waitUntilDone:NO];
+         [self jsSuccessWithName:@"uexESurfingRtc.cbLogStatus" opId:0 dataType:0 strData:@"ERROR:PARM_ERROR"];
         
     }
     
     return EC_OK;
 }
+-(void)onItemClickCallBack:(NSString*)senser{
+ [self jsSuccessWithName:@"uexESurfingRtc.cbLogStatus" opId:0 dataType:0 strData:@"OK:LOGIN"];
 
+}
 -(void)setLog:(NSString*)log
 {
     //回调信息；
@@ -268,27 +279,6 @@
     [self jsSuccessWithName:@"uexESurfingRtc.onGlobalStatus" opId:0 dataType:1 strData:strs];
    // [[NSUserDefaults standardUserDefaults]setObject:str forKey:[NSString stringWithFormat:@"ViewLog%d",mLogIndex]];
     mLogIndex++;
-}
-
-//用户在线状态查询结果回调
--(int)onAccStatusQueryResponse:(NSDictionary*)result accObj:(AccObj*)accObj
-{
-    return EC_OK;
-}
-
--(int)onNotifyMessage:(NSDictionary*)result  accObj:(AccObj*)accObj
-{
-    return EC_OK;
-}
-
--(int)onGroupResponse:(NSDictionary*)result grpObj:(CallObj*)grpObj
-{
-    return EC_OK;
-}
-
--(int)onGroupCreate:(NSDictionary*)param withNewCallObj:(CallObj*)newCallObj accObj:(AccObj*)accObj
-{
-    return EC_OK;
 }
 
 //--------------onRecvEvent----监听-----------------------------------------------
@@ -309,6 +299,14 @@
     
     if (MSG_NEED_VIDEO == msgid)//发起呼叫
     {
+        long long localV = [[data objectForKey:@"lvideo"]longLongValue];
+        long long remoteV = [[data objectForKey:@"rvideo"]longLongValue];
+        videoView = (IOSDisplay*)remoteV;
+        
+        localVideoView = (UIView*)localV;
+        
+        long long ptrval = (long long)(videoView);
+        
         BOOL isCallOut = [[data objectForKey:@"iscallout"]boolValue];
         
         if (mCallObj ==nil && isCallOut )
@@ -318,36 +316,31 @@
             [mCallObj bindAcc:mAccObj];
             
            // SDK_CALLTYPE callType = (remoteV != 0)? VIDEO_CALL:AUDIO_CALL;
-            if (self.callTypes == AUDIO_CALL || self.callTypes == AUDIO_CALL_SENDONLY || self.callTypes == AUDIO_CALL_RECVONLY)
-            {
-                mCallObj.CallMedia = MEDIA_TYPE_AUDIO;
-            }
-            else
-                mCallObj.CallMedia = MEDIA_TYPE_VIDEO;
-            
+            mCallObj.CallMedia = (remoteV != 0)? MEDIA_TYPE_VIDEO:MEDIA_TYPE_AUDIO;
             NSString* remoteUri = self.callName;
             NSDictionary* dic = [NSDictionary dictionaryWithObjectsAndKeys:
                                  remoteUri,KEY_CALLED,
                                  [NSNumber numberWithInt:self.callTypes],KEY_CALL_TYPE,
                                  [NSNumber numberWithInt:ACCTYPE_APP],KEY_CALL_REMOTE_ACC_TYPE,
                                  remoteTerminalType,KEY_CALL_REMOTE_TERMINAL_TYPE,
-                                 @"",KEY_CALL_INFO,
+                                 @"yewuxinxi",KEY_CALL_INFO,
                                  nil];
             NSLog(@"发送信息=======>>>%@",dic);
             //发起呼叫 doMakeCall:
-            //[self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"OK:CALLING"];
+            [self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"OK:CALLING"];
             int ret = [mCallObj doMakeCall:dic];
             if (EC_OK > ret)
             {
                 if (mCallObj)
-                {
                     [mCallObj doHangupCall];
+                if (mCallObj)
+                {
                     [mCallObj release];
-                    mCallObj = nil;
                 }
+                mCallObj = nil;
                 
                 [self setLog:[NSString stringWithFormat:@"创建呼叫失败:%@",[SdkObj ECodeToStr:ret]]];
-                [self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"ERROR:PARM_ERROR"];
+                [self jsSuccessWithName:@"uexESurfingRtc.cbCallIng" opId:0 dataType:0 strData:@"ERROR:PARM_ERROR"];
 
             }
             //切换音频播放设备；doSwitchAudioDevice:
@@ -363,44 +356,61 @@
             
             [mCallObj doAcceptCall:[NSNumber numberWithInt:self.accepptType]];
             [self setLog:@"音频已接听"];
+            [self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"OK:CALLING"];
+            
             //[mCallObj doSwitchAudioDevice:SDK_AUDIO_OUTPUT_SPEAKER];
         }
         else
         {
-            [self setLog:@"视频已接听"];
+            
+            long long localV = [[data objectForKey:@"lvideo"]longLongValue];
+            NSLog(@"%lld",localV);
+            long long remoteV = [[data objectForKey:@"rvideo"]longLongValue];
+            NSLog(@"%lld",remoteV);
+
+            videoView = (IOSDisplay*)remoteV;
+            localVideoView = (UIView*)localV;
             [mCallObj doAcceptCall:[NSNumber numberWithInt:self.accepptType]];
+                
+            
+//            }
         }
+        [self onCallOk];
         return;
     }
     if (MSG_REJECT == msgid)//拒接
     {
         [self setLog:@"拒接中......"];
+        [mCallObj doRejectCall];
        
+        
+//        [self closeCallingView];
         if (mCallObj)
         {
-            [mCallObj doRejectCall];
             [mCallObj release];
-            mCallObj = nil;
         }
-        
-        [localVideoView removeFromSuperview];
-        [remoteVideoView removeFromSuperview];
+        mCallObj = nil;
+        [vItem removeFromSuperview];
+        [ivItem removeFromSuperview];
         
         return;
+        
     }
     if (MSG_HANGUP == msgid)//挂断
     {
         if (mCallObj)
-        {
             [mCallObj doHangupCall];
+               if (mCallObj)
+        {
             [mCallObj release];
-            mCallObj = nil;
         }
-        
+        mCallObj = nil;
+        cameraIndex = 1;
         [self setLog:@"呼叫已结束"];
-        [localVideoView removeFromSuperview];
-        [remoteVideoView removeFromSuperview];
+        [vItem removeFromSuperview];
+        [ivItem removeFromSuperview];
        
+
         return;
     }
     if (MSG_MUTE == msgid)//静音
@@ -413,12 +423,10 @@
         if ([mCallObj MuteStatus] == NO)
         {
             [mCallObj doMuteMic:MUTE_DOMUTE];
-            [self setLog:@"静音"];
         }
         else
         {
             [mCallObj doMuteMic:MUTE_DOUNMUTE];
-            [self setLog:@"解除静音"];
         }
         return;
     }
@@ -439,15 +447,14 @@
         {
             [mCallObj doSwitchAudioDevice:SDK_AUDIO_OUTPUT_DEFAULT];
             [self setLog: @"放音设备切换到听筒/耳机"];
+            
         }
+        
         return;
     }
+
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>以上为”监听“部分>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
--(void)cbCallStatus:(NSString*)senser{
-    [self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:senser];
-}
-
 //呼叫事件回调
 -(int)onCallBack:(SDK_CALLBACK_TYPE)type code:(int)code callObj:(CallObj*)callObj
 {
@@ -455,41 +462,32 @@
     //不同事件类型见SDK_CALLBACK_TYPE
     if(type == SDK_CALLBACK_RING)
     {
-        [self performSelectorOnMainThread:@selector(cbCallStatus:) withObject:@"OK:CALLING" waitUntilDone:NO];
+        [self jsSuccessWithName:@"uexESurfingRtc.cbCallIng" opId:0 dataType:0 strData:@"OK:CALLING"];
     }
     else if (type == SDK_CALLBACK_ACCEPTED)
     {
-        [self performSelectorOnMainThread:@selector(cbCallStatus:) withObject:@"OK:ACCEPTING" waitUntilDone:NO];
+        
+        [self onCallOk];
         [self setCallIncomingFlag:NO];
     }
-    else  if (type == SDK_CALLBACK_CLOSED)
-    {
-        [self performSelectorOnMainThread:@selector(cbCallStatus:) withObject:@"OK:CLOSING" waitUntilDone:NO];
-        [localVideoView removeFromSuperview];
-        [remoteVideoView removeFromSuperview];
-        if (mCallObj)
-        {
-            [mCallObj release];
-            mCallObj = nil;
-        }
-        [self setCallIncomingFlag:NO];
-    }
-    else  if (type == SDK_CALLBACK_FAILED)
-    {
-        [self performSelectorOnMainThread:@selector(cbCallStatus:) withObject:@"OK:FAILLING" waitUntilDone:NO];
-        [localVideoView removeFromSuperview];
-        [remoteVideoView removeFromSuperview];
-        if (mCallObj)
-        {
-            [mCallObj release];
-            mCallObj = nil;
-        }
-        [self setCallIncomingFlag:NO];
-    }
+    else if (type ==SDK_CALLBACK_CLOSED){
+        [vItem removeFromSuperview];
+        [ivItem removeFromSuperview];
     
+    }
+    else
+    {
+//        [self closeCallingView];
+        if (callObj)
+        {
+            [callObj release];
+        }
+        mCallObj = nil;
+        cameraIndex = 1;
+        [self setCallIncomingFlag:NO];
+    }
     return 0;
 }
-
 #define CALL_INCOMING_FLAG  @"CALL_INCOMING_FLAG"
 -(BOOL)isBackground
 {
@@ -497,20 +495,9 @@
     ||[[UIApplication sharedApplication] applicationState] == UIApplicationStateInactive;
 }
 
-//标志后台来电中的状态
 -(void)setCallIncomingFlag:(BOOL)reg
 {
     [[NSUserDefaults standardUserDefaults]setObject:[NSNumber numberWithBool:reg] forKey:CALL_INCOMING_FLAG];
-}
-
--(BOOL)getCallIncomingFlag
-{
-    id obj = [[NSUserDefaults standardUserDefaults]objectForKey:CALL_INCOMING_FLAG];
-    if (obj)
-    {
-        return [obj boolValue];
-    }
-    return NO;
 }
 
 //呼叫媒体建立事件通知
@@ -518,11 +505,10 @@
 {
     if (mediaType == MEDIA_TYPE_VIDEO)
     {
-        int ret = [callObj doSetCallVideoWindow:remoteVideoView localVideoWindow:localVideoView];
+        int ret = [callObj doSetCallVideoWindow:videoView localVideoWindow:localVideoView];
         NSLog(@">>>%d",ret);
         [self setLog:[NSString stringWithFormat:@"%d",ret]];
     }
-    [self setMotionStatus:YES];
     [self setCallIncomingFlag:NO];
     return 0;
 }
@@ -538,44 +524,25 @@
     
     if ([self isBackground])
     {
-        const char* cacc = [uri UTF8String];
-        int strindex1=0,strindex2=0;
-        int l = (int)strlen(cacc);
-        for(int i = 0;i<l;i++)
-        {
-            if(cacc[i]=='-')
-            {
-                strindex1=i;
-                break;
-            }
-        }
-        for(int i = 0;i<l;i++)
-        {
-            if(cacc[i]=='~')
-            {
-                strindex2=i;
-                break;
-            }
-        }
-        NSString* accNum = [[NSString stringWithUTF8String:cacc] substringWithRange:NSMakeRange(strindex1+1, strindex2-strindex1-1)];
-        
         [self setCallIncomingFlag:YES];
         [[NSUserDefaults standardUserDefaults]setObject:[NSNumber numberWithInt:callType] forKey:KEY_CALL_TYPE];
         [[NSUserDefaults standardUserDefaults]setObject:uri     forKey:KEY_CALLER];
-        makeNotification(@"接听",[NSString stringWithFormat:@"来电:%@",accNum],UILocalNotificationDefaultSoundName,YES);
-        [self setLog:[NSString stringWithFormat:@"来电:%@",accNum]];
+        makeNotification(@"接听",[NSString stringWithFormat:@"来电:%@",uri],UILocalNotificationDefaultSoundName,YES);
+        [self setLog:[NSString stringWithFormat:@"来电:%@",uri]];
         return 0;
     }
     if (callType==1||callType==5||callType==9)
     {
-         //[self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"OK:INCOMING"];
-        [self performSelectorOnMainThread:@selector(cbCallStatus:) withObject:@"OK:INCOMING" waitUntilDone:NO];
+        UIAlertView * alert = [[UIAlertView alloc]initWithTitle:@"来电接听" message:nil delegate:self cancelButtonTitle:nil otherButtonTitles:@"ok", nil];
+        [alert show];
+         [self jsSuccessWithName:@"uexESurfingRtc.cbCallIng" opId:0 dataType:0 strData:@"OK:INCOMING"];
+        
     }
     
     if (callType == 3 || callType == 7 || callType == 11)
     {
-        //[self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"OK:INCOMING"];
-        [self performSelectorOnMainThread:@selector(cbCallStatus:) withObject:@"OK:INCOMING" waitUntilDone:NO];
+        
+        [self jsSuccessWithName:@"uexESurfingRtc.cbCallIng" opId:0 dataType:0 strData:@"OK:INCOMING"];
 
         DAPIPView* dvItem = [[DAPIPView alloc] init];
         self.dapiview = dvItem;
@@ -596,16 +563,22 @@
         }
         
         //远端窗口
-        remoteVideoView = [[IOSDisplay alloc]initWithFrame:CGRectMake(self.x1,self.y1, self.width, self.height1)];
-        remoteVideoView.backgroundColor = [UIColor whiteColor];
-        [EUtility brwView:meBrwView  addSubview:remoteVideoView];
+        ivItem = [[IOSDisplay alloc]initWithFrame:CGRectMake(self.x1,self.y1, self.width, self.height1)];
+        
+        ivItem.backgroundColor = [UIColor whiteColor];
+        self.remoteVideoView = ivItem;
+        [EUtility brwView:meBrwView  addSubview:ivItem];
+        [ivItem release];
         
         //本地窗口;
-        localVideoView = [[UIView alloc]initWithFrame:CGRectMake(self.x, self.y, self.width, self.height)];
-        NSLog(@"%@",NSStringFromCGRect(localVideoView.frame));
-        localVideoView.backgroundColor = [UIColor whiteColor];
+        vItem = [[UIView alloc]initWithFrame:CGRectMake(self.x, self.y, self.width, self.height)];
+        NSLog(@"%@",NSStringFromCGRect(vItem.frame));
+        vItem.backgroundColor = [UIColor whiteColor];
         // vItem.center = CGPointMake(self.dapiview.bounds.size.width/2, self.dapiview.bounds.size.height/2);
-        [EUtility brwView: meBrwView  addSubview:localVideoView];
+        self.localVideoView = vItem;
+        
+        [EUtility brwView: meBrwView  addSubview:vItem];
+        [vItem release];
         
         [dvItem release];
         
@@ -632,9 +605,14 @@
         
         return;
     }
+
+    long long rVideo = 0;
+    long long lVideo = 0;
     
     if (self.callTypes==3||self.callTypes==7||self.callTypes==11)
     {
+        
+        
         DAPIPView* dvItem = [[DAPIPView alloc] init];
         self.dapiview = dvItem;
         
@@ -654,28 +632,42 @@
         }
         
         //远端窗口
-        remoteVideoView = [[IOSDisplay alloc]initWithFrame:CGRectMake(self.x1,self.y1, self.width1, self.height1)];
-        remoteVideoView.backgroundColor = [UIColor whiteColor];
-        [EUtility brwView:meBrwView  addSubview:remoteVideoView];
+        ivItem = [[IOSDisplay alloc]initWithFrame:CGRectMake(self.x1,self.y1, self.width1, self.height1)];
+        ivItem.backgroundColor = [UIColor whiteColor];
+        self.remoteVideoView = ivItem;
+        [EUtility brwView:meBrwView  addSubview:ivItem];
+        [ivItem release];
         
         //本地窗口;
-        localVideoView = [[UIView alloc]initWithFrame:CGRectMake(self.x, self.y, self.width, self.height)];
-        NSLog(@"%@",NSStringFromCGRect(localVideoView.frame));
-        localVideoView.backgroundColor = [UIColor whiteColor];
+        vItem = [[UIView alloc]initWithFrame:CGRectMake(self.x, self.y, self.width, self.height)];
+        NSLog(@"%@",NSStringFromCGRect(vItem.frame));
+        vItem.backgroundColor = [UIColor whiteColor];
        // vItem.center = CGPointMake(self.dapiview.bounds.size.width/2, self.dapiview.bounds.size.height/2);
-        [EUtility brwView: meBrwView  addSubview:localVideoView];
+        self.localVideoView = vItem;
+       
+        [EUtility brwView: meBrwView  addSubview:vItem];
+        [vItem release];
         
+//        [EUtility brwView: meBrwView  addSubview:dvItem];
         [dvItem release];
+
+        rVideo = (long long)(self.remoteVideoView);
+        NSLog(@"++++++>>>AAAA%@",self.remoteVideoView);
+        lVideo = (long long)(self.localVideoView);
+         NSLog(@"+++++>>>>BBBB%@",self.localVideoView);
     }
     NSDictionary* params = [NSDictionary dictionaryWithObjectsAndKeys:@"", @"params",
                             [NSNumber numberWithInt:MSG_NEED_VIDEO],@"msgid",
                             [NSNumber numberWithInt:0],@"arg",
+                            [NSNumber numberWithLongLong:rVideo],@"rvideo",
+                            [NSNumber numberWithLongLong:lVideo],@"lvideo",
                             [NSNumber numberWithBool:YES],@"iscallout",
                             nil];
     NSLog(@"发送监听：：》》》》%@",params);
     [[NSNotificationCenter defaultCenter]  postNotificationName:@"NOTIFY_EVENT" object:nil userInfo:params];
         
     }
+
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>以上为呼出音频+视频>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -685,26 +677,60 @@
     if ([inArgument isKindOfClass:[NSMutableArray class]] && [inArgument count] == 1){
         
         NSLog(@"%@",inArgument);
+        
         self.accepptType = [[inArgument objectAtIndex:0] intValue];
+        
     
-        if(!mSDKObj)
-        {
-            [self setLog:@"请先初始化"];
-             [self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"ERROR:UNREGISTER"];
-            return;
-        }
+    if(!mSDKObj)
+    {
+        [self setLog:@"请先初始化"];
+         [self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"ERROR:UNREGISTER"];
+        return;
+    }
+    
+//    NSDictionary* params = [NSDictionary dictionaryWithObjectsAndKeys:@"", @"params",
+//                            [NSNumber numberWithInt:MSG_ACCEPT],@"msgid",
+//                            [NSNumber numberWithInt:0],@"arg",
+//                            nil];
+        
+        long long rVideo = 0;
+        long long lVideo = 0;
+        
+        rVideo = (long long)(self.remoteVideoView);
+        NSLog(@"++++++>>>AAAA%@",self.remoteVideoView);
+        lVideo = (long long)(self.localVideoView);
+        NSLog(@"+++++>>>>BBBB%@",self.localVideoView);
+        
         
         NSDictionary* params = [NSDictionary dictionaryWithObjectsAndKeys:@"", @"params",
                                 [NSNumber numberWithInt:MSG_ACCEPT],@"msgid",
                                 [NSNumber numberWithInt:0],@"arg",
+                                [NSNumber numberWithLongLong:rVideo],@"rvideo",
+                                [NSNumber numberWithLongLong:lVideo],@"lvideo",
                                 nil];
     
-        NSLog(@"+++++>>>>接听:%@",params);
-        [self setLog:@"音频接听中......."];
-        [[NSNotificationCenter defaultCenter]  postNotificationName:@"NOTIFY_EVENT" object:nil userInfo:params];
+    NSLog(@"+++++>>>>接听:%@",params);
+    [self setLog:@"音频接听中......."];
+    [[NSNotificationCenter defaultCenter]  postNotificationName:@"NOTIFY_EVENT" object:nil userInfo:params];
+         
      }
-}
 
+}
+//接通
+-(void)onCallOk
+{
+    if (isVideo)
+    {
+    [self.dapiview setHidden:NO];
+    if (isAutoRotate)
+    {
+        [self setLog:[NSString stringWithFormat:@"自动旋转适配:%@",isAutoRotate?@"开启":@"关闭"]];
+        isAutoRotate = !isAutoRotate;
+    }
+    }
+
+   
+}
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>以上为接听>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 //拒接rejectCall接口；
@@ -723,6 +749,7 @@
                             nil];
     
     [[NSNotificationCenter defaultCenter]  postNotificationName:@"NOTIFY_EVENT" object:nil userInfo:params];
+
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>以上拒接>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 //注销logout接口；
@@ -735,6 +762,7 @@
         mAccObj = nil;
         [self setLog:@"注销完毕"];
         
+        
         if(mSDKObj)
         {
             [mSDKObj release];
@@ -743,15 +771,18 @@
             [self setLog:@"release完毕"];
             [self jsSuccessWithName:@"uexESurfingRtc.cbLogStatus" opId:0 dataType:0 strData:@"OK:LOGOUT"];
         }
-        [localVideoView removeFromSuperview];
-        [remoteVideoView removeFromSuperview];
+        [vItem removeFromSuperview];
+        [ivItem removeFromSuperview];
 //        self.appid=0;
 //        self.appkeys = 0;
+       
+       
     }
     else
     {
         [self setLog:@"请先登录"];
     }
+
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>以上部分为注销logout接口>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 //挂断hangUp接口；
@@ -762,6 +793,9 @@
                             [NSNumber numberWithInt:0],@"arg",
                             nil];
     [[NSNotificationCenter defaultCenter]  postNotificationName:@"NOTIFY_EVENT" object:nil userInfo:params];
+    
+    
+    
 }
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>以上部分为挂断接口hangUp>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -772,7 +806,10 @@
                             [NSNumber numberWithInt:MSG_MUTE],@"msgid",
                             [NSNumber numberWithInt:0],@"arg",
                             nil];
+    [self setLog:mMuteState?@"解除静音":@"静音"];
     [[NSNotificationCenter defaultCenter]  postNotificationName:@"NOTIFY_EVENT" object:nil userInfo:params];
+     mMuteState = !mMuteState;
+
 }
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>以上为静音mute接口>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -792,6 +829,33 @@
 //呼叫网络状态事件通知
 -(int)onNetworkStatus:(NSString*)desc callObj:(CallObj*)callObj
 {
+   // { "msg": 101, "codec": 1211250228, "w": 176, "h": 144, "rf": 10, "rb": 124760, "lost": 0, "sf": 10, "sb": 105665 };
+        if (desc )
+        {
+//            NSDictionary* dic = [desc objectFromJSONString];
+//            NSLog(@"%@",dic);
+//            //int msg = [[dic objectForKey:@"msg"]intValue];
+//            //int codec = [[dic objectForKey:@"codec"]intValue];
+//            int w = [[dic objectForKey:@"w"]intValue];
+//            int h = [[dic objectForKey:@"h"]intValue];
+//            int recvFrameRate = [[dic objectForKey:@"rf"]intValue];
+//            //int recvBitrate = [[dic objectForKey:@"rb"]intValue];
+//            int recvLost = [[dic objectForKey:@"lost"]intValue];
+//            int sendFrameRate = [[dic objectForKey:@"sf"]intValue];
+//            //int sendBitrate = [[dic objectForKey:@"sb"]intValue];
+//            if (w == 0 || h == 0)
+//                return 0;
+    //        [callingView setVideoStatus:
+    //         [NSString stringWithFormat:@"[V:%d*%d][SF:%d][RF:%d[RL:%d]",
+    //          w,h,
+    //          sendFrameRate,
+    //          recvFrameRate,recvLost
+    //          ]];//在界面显示网络状态
+//
+//    
+       }
+
+//    NSLog(@"++++>>>>%@",desc);
     return 0;
 }
 
@@ -824,6 +888,8 @@
                 
             }
             
+            initCWDebugLog();
+            
         }
     }
 }
@@ -831,11 +897,13 @@
 
 -(void)takeRemotePicture:(NSMutableArray*)inArgument{
     
+  
         if (!mCallObj || mCallObj.CallMedia!= MEDIA_TYPE_VIDEO)
         {
             [self setLog:@"请先呼叫"];
             return;
         }
+    
     
         //获取应用程序沙盒的Documents目录
         NSBundle* mainBundle = [NSBundle mainBundle];
@@ -863,6 +931,7 @@
         [self callBackMethodSuccess:[NSString stringWithFormat:@"%@",resultPath]];
     
       return;
+
 }
 
 -(void)callBackMethodSuccess:(NSString *)jsString{
@@ -885,229 +954,13 @@
     return currentTime;
 }
 
--(NSInteger)calcRotation:(double)xy z:(double)z
-{
-    if ((z >= 45 && z <= 135) || (z >= -135 && z <= -45))//处于正向水平,反向水平位置,此时可作为竖直方向
-    {
-        return 0;
-    }
-    if (xy <= 180 && xy > 135)//竖直方向,向右侧倾斜,但未到角度
-    {
-        return 0;
-    }
-    if (xy <= 135 && xy >= 90)//竖直方向,向右倾斜,已经到位
-    {
-        return 90;
-    }
-    if (xy < 90 && xy >= 45) //斜向下方向,尚未到位
-    {
-        return 90;
-    }
-    if (xy < 45 && xy >= 0)//头朝下,已到位
-    {
-        return 180;
-    }
-    if (xy < 0 && xy >= -45)//头朝下,未到位
-    {
-        return 180;
-    }
-    if (xy < -45 && xy >= -90)//头朝下,已到位
-    {
-        return 270;
-    }
-    if (xy < -90 && xy >= -135)//头朝下,未到位
-    {
-        return 270;
-    }
-    if (xy < -135 && xy >= -180)//头朝上,偏左,已到位
-    {
-        return 0;
-    }
-    return 0;
-}
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>以上部分为远端截屏(screenshots:)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
--(void)setMotionStatus:(BOOL)doStart
-{
-    if (doStart)//对端接收的图像始终保持竖直方向
-    {
-        [mMotionManager startDeviceMotionUpdatesToQueue:[[[NSOperationQueue alloc] init] autorelease]
-                                            withHandler:^(CMDeviceMotion *motion, NSError *error) {
-                                                dispatch_sync(dispatch_get_main_queue(), ^(void) {
-                                                    double gravityX = motion.gravity.x;
-                                                    double gravityY = motion.gravity.y;
-                                                    double gravityZ = motion.gravity.z;
-                                                    double xyTheta = atan2(gravityX,gravityY)/M_PI*180.0;
-                                                    double zTheta = atan2(gravityZ,sqrtf(gravityX*gravityX+gravityY*gravityY))/M_PI*180.0;
-                                                    NSInteger rotation = [self calcRotation:xyTheta z:zTheta];
-                                                    [[NSNotificationCenter defaultCenter]postNotificationName:@"MOTIONCHECK_NOTIFY"
-                                                                                                       object:nil
-                                                                                                     userInfo:
-                                                     [NSDictionary dictionaryWithObjectsAndKeys:
-                                                      [NSNumber numberWithInteger:rotation],@"rotation",
-                                                      nil]];
-                                                    
-                                                });
-                                            }];
-    }
-    else//对端接收的图像会随着本地设备的旋转而旋转
-    {
-        [mMotionManager stopDeviceMotionUpdates];
-        [[NSNotificationCenter defaultCenter]postNotificationName:@"MOTIONCHECK_NOTIFY"
-                                                           object:nil
-                                                         userInfo:
-         [NSDictionary dictionaryWithObjectsAndKeys:
-          [NSNumber numberWithInteger:0],@"rotation",
-          nil]];
-        
-    }
-}
 
--(void)checkNetWorkReachability
-{
-    firstCheckNetwork=YES;
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(reachabilityNetWorkStatusChanged:)
-                                                 name: kReachabilityChangedNotification
-                                               object: nil];
-    
-    hostReach = [[Reachability reachabilityWithHostname:@"www.apple.com"] retain];
-    [hostReach startNotifier];
-}
 
--(BOOL)accObjIsRegisted
-{
-    if (mAccObj && [mAccObj isRegisted])
-        return  YES;
-    return NO;
-}
 
-- (void) reachabilityNetWorkStatusChanged: (NSNotification* )note
-{
-    Reachability* curReach = [note object];
-    int networkStatus = [curReach currentReachabilityStatus];
-    BOOL isLogin = [self accObjIsRegisted];
-    if (isLogin)
-    {
-        if (networkStatus==NotReachable)
-        {
-            //网络断开后销毁网络数据
-            [self onNetworkChanged:NO];
-        }
-        else
-        {
-            if (firstCheckNetwork)
-            {
-                firstCheckNetwork=NO;
-                return;
-            }
-            //网络恢复后进行重连
-            [self onNetworkChanged:YES];
-        }
-    }
-    
-    firstCheckNetwork=NO;
-}
 
--(void)onNetworkChanged:(BOOL)netstatus
-{
-    if (nil == mSDKObj || nil == mAccObj || NO == [mSDKObj isInitOk] || NO == [mAccObj isRegisted])
-        return;
-    CWLogDebug(@"networkChanged");
-    if(netstatus)
-        [mSDKObj onAppEnterBackground];//网络恢复后进行重连
-    else
-    {
-        [mSDKObj onNetworkChanged];//网络断开后销毁网络数据
-        
-        if(mCallObj)//通话被迫结束，销毁通话界面
-        {
-            [mCallObj doHangupCall];
-            [mCallObj release];
-            mCallObj = nil;
-        }
-        [localVideoView removeFromSuperview];
-        [remoteVideoView removeFromSuperview];
-    }
-}
 
-- (void)keepAlive
-{
-    [self onAppEnterBackground];
-}
 
--(void)onAppEnterBackground
-{
-    if (nil == mSDKObj || nil == mAccObj || NO == [mSDKObj isInitOk] || NO == [mAccObj isRegisted])
-        return;
-    [mSDKObj onAppEnterBackground];//SDK长连接
-}
-
--(void)enterBackgroundNotification:(NSNotification *) notification
-{
-    //后台重连
-    [NSRunLoop currentRunLoop];
-    [self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
-    [[UIApplication sharedApplication] setKeepAliveTimeout:600 handler: ^{
-        [self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
-    }];
-}
-
--(void)enterForegroundNotification:(NSNotification *) notification
-{
-    if ([self getCallIncomingFlag])
-    {
-        [self setCallIncomingFlag:NO];
-        int callType = [[[NSUserDefaults standardUserDefaults]objectForKey:KEY_CALL_TYPE]intValue];
-        
-        //延时等待应用唤醒后，再创建界面
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5*NSEC_PER_SEC)),dispatch_get_main_queue(),^
-                       {
-                           if (callType==1||callType==5||callType==9)
-                           {
-                               //[self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"OK:INCOMING"];
-                               [self performSelectorOnMainThread:@selector(cbCallStatus:) withObject:@"OK:INCOMING" waitUntilDone:NO];
-                           }
-                           
-                           if (callType == 3 || callType == 7 || callType == 11)
-                           {
-                               [self performSelectorOnMainThread:@selector(cbCallStatus:) withObject:@"OK:INCOMING" waitUntilDone:NO];
-                               //[self jsSuccessWithName:@"uexESurfingRtc.cbCallStatus" opId:0 dataType:0 strData:@"OK:INCOMING"];
-                               
-                               DAPIPView* dvItem = [[DAPIPView alloc] init];
-                               self.dapiview = dvItem;
-                               
-                               if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone)
-                               {
-                                   self.dapiview.borderInsets = UIEdgeInsetsMake(1.0f,       // top
-                                                                                 1.0f,       // left
-                                                                                 1.0f,      // bottom
-                                                                                 1.0f);      // right
-                               }
-                               else
-                               {
-                                   self.dapiview.borderInsets = UIEdgeInsetsMake(1.0f,       // top
-                                                                                 1.0f,       // left
-                                                                                 1.0f,       // bottom
-                                                                                 1.0f);      // right
-                               }
-                               
-                               //远端窗口
-                               remoteVideoView = [[IOSDisplay alloc]initWithFrame:CGRectMake(self.x1,self.y1, self.width, self.height1)];
-                               remoteVideoView.backgroundColor = [UIColor whiteColor];
-                               [EUtility brwView:meBrwView  addSubview:remoteVideoView];
-                               
-                               //本地窗口;
-                               localVideoView = [[UIView alloc]initWithFrame:CGRectMake(self.x, self.y, self.width, self.height)];
-                               NSLog(@"%@",NSStringFromCGRect(localVideoView.frame));
-                               localVideoView.backgroundColor = [UIColor whiteColor];
-                               // vItem.center = CGPointMake(self.dapiview.bounds.size.width/2, self.dapiview.bounds.size.height/2);
-                               [EUtility brwView: meBrwView  addSubview:localVideoView];
-                               
-                               [dvItem release];
-                               
-                           }
-                       });
-    }
-}
 
 @end
