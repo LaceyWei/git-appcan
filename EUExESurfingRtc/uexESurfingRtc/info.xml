@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <uexplugins>
-    <plugin uexName="uexESurfingRtc" version="3.0.6" build ="6">
-        <info>6:增加设置appid和appkey回调</info>
+    <plugin uexName="uexESurfingRtc" version="3.0.7" build ="7">
+    	<info>7:修改login接口参数与android不一致问题，增加通话状态，增加后台长连接通知与网络切换检测</info>
+        <build>6:增加设置appid和appkey回调</build>
          <build>5:改为主函数回调</build>
           <build>4:测试接收appid和appkey的方式</build>
             <build>3:改变接收appid和appkey的方式</build>

@@ -10,13 +10,13 @@
 #import "EUExBase.h"
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
+#import <CoreMotion/CoreMotion.h>
 #import "OpenUDID.h"
 #import "DAPIPView.h"
 
 #import "sdkobj.h"
 #import "tyrtchttpengine.h"
 #import "MKNetworkOperation.h"
-static int cameraIndex = 1;//切换摄像头索引
 
 typedef enum EVENTID
 {
@@ -43,34 +43,21 @@ typedef enum EVENTID
     SdkObj* mSDKObj;
     AccObj* mAccObj;
     CallObj*  mCallObj;
-    CGSize  mVideoSize;
     
     SDK_ACCTYPE         accType;
     NSString*   terminalType;
     NSString*   remoteTerminalType;
     SDK_ACCTYPE         remoteAccType;
     
-    BOOL isAutoRotationVideo;//是否自动适配本地采集的视频,使发送出去的视频永远是人头朝上
     int     mLogIndex;
-    IOSDisplay *videoView;
+    
+    IOSDisplay *remoteVideoView;
     UIView *localVideoView;
-       
    
-     BOOL firstCheckNetwork;
-    
-    EUExESurfingRtc * EUEx_object;
-    
-    UIImageView *_frameView;
-    UIImageView *_displayView;
-    BOOL mMuteState;//NO 未静音;YES 已静音
-
-    
-    BOOL mHoldState;//NO 未Hold,YES 已HOLD
-    
-    IOSDisplay * ivItem;
-    UIView* vItem;
+    BOOL firstCheckNetwork;
  
-
+    Reachability* hostReach;
+    CMMotionManager *mMotionManager;//自动旋转
 }
 @property(nonatomic,retain)NSString * str;
 @property(nonatomic,retain)NSString * callName;
@@ -79,12 +66,7 @@ typedef enum EVENTID
 @property(nonatomic,assign)int accepptType;
 
 @property (strong, nonatomic) DAPIPView * dapiview;
-@property (strong, nonatomic) IOSDisplay *remoteVideoView;
-@property(nonatomic,assign)BOOL isCallOut;
-@property(nonatomic,assign)BOOL isVideo;
-@property(nonatomic,assign)BOOL isAutoRotate;
-@property (strong, nonatomic) UIView *localVideoView;
-@property (nonatomic) UIEdgeInsets borderInsets;
+
 @property(nonatomic,assign)int x;
 @property(nonatomic,assign)int y;
 @property(nonatomic,assign)int width;
@@ -99,28 +81,12 @@ typedef enum EVENTID
 
 @property (nonatomic,copy)NSString *currentTime;
 
-//@property(nonatomic,retain)NSString * appkeys;
-//@property(nonatomic,retain)NSString * appids;
-
-
 @property(nonatomic,retain)NSString * appkey;
 @property(nonatomic,retain)NSString * appid;
 
-
-
-
-
-
-
 -(void)setLog:(NSString*)log;
--(CGRect)calcBtnRect:(CGPoint)start index:(int)index size:(CGSize)size linSep:(int)lineSep colSep:(int)colSep;
--(BOOL)addGridBtn:(NSString*)title  func:(SEL)func rect:(CGRect)rect;
-- (void)onApplicationWillEnterForeground:(UIApplication *)application;
 -(void)onAppEnterBackground;
 -(void)onNetworkChanged:(BOOL)netstatus;
 -(BOOL)accObjIsRegisted;
-
--(void)onCallOk;
--(void)setCallStatus:(NSString*)log;
 
 @end
